@@ -19,7 +19,9 @@ This script bulk imports zone records into an Azure DNS Zone using a csv file.
 
 If the DNS Zone does not exist in the selected subscription, the script will prompt to automatically create the domain.
 
-_Let's get real_.  I wrote this script to move away from a company called Peer 1.  They allowed duplicate CNAME and A records, which is technically not allowed.  Because of this, I have a check in here to avoid an Azure error that I'd like to talk about.  If you have a duplicate CNAME and A record, the script will output an error and keep going, so **check your logs**.  It will favor the A record over the CNAME due to performance gains.  In the extremely unlikely event of the A and CNAME values being equal, it will omit a warning.  More likely though, it will omit an error for you to check which one is correct.
+If a record already exists in Azure and the record type allows additional records (ex, TXT), the script will append the new value to the existing record set and submit it.  If it can't be appended, like an A record, it will output an error.
+
+_Let's get real_.  I wrote this script to move away from a company called Peer 1.  They allowed duplicate CNAME and A records, which is technically not allowed.  Because of this, I have a check in here to avoid an Azure error that I'd like to talk about.  If you have a duplicate CNAME and A record, the script will output an error and keep going, so **check your logs**.  It will favor the A record over the CNAME due to performance gains.  In the extremely unlikely event of the A and CNAME values being equal, it will emit a warning.  More likely though, it will emit an error for you to check which one is correct.
 
 ### Prerequisites
 The csv file should have the following headers:
