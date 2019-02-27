@@ -38,7 +38,7 @@ The csv file should have the following headers:
 ```
 MigrateZones -FileName <string> -ResourceGroupName <string> [-SubscriptionId <string>] [-OverrideDomainName <string>]  [-DefaultTtl <int32>]
 ```
-##Parameters
+## Parameters
 
 ### -FileName
 The FileName of the csv for bulk importing.  This file needs the headers mentioned above.  It will error out if the header is not found or if they are wrong.  By default, the filename can be the target dns zone name (ie, the domain).  For example, "example.com" can be inferred from "example.com.csv".
@@ -83,15 +83,15 @@ We can run:
 ```
 This will infer the domain from the file name and import the records into the DNS Zone.  This is the simplest way to run the script.
 
-With results in Azure showing:
-Name | Type | Ttl | Options | Record
---- | --- | --- | --- | ---
-@ | A | 300 |  | 10.1.1.2
-mail | A | 300 | | 10.1.1.3
-news | A | 3600 | | 10.1.1.4
-www | CNAME | **3600** | | example-app.azurewebsites.net
-@ | TXT | 3600 | | example-app.azurewebsites.net
-example.com | MX | 3600 | 10 | mail.example.com
+| With results in Azure showing:
+| Name | Type | Ttl | Options | Record |
+| --- | --- | --- | --- | --- |
+| @ | A | 300 |  | 10.1.1.2 |
+| mail | A | 300 | | 10.1.1.3 |
+| news | A | 3600 | | 10.1.1.4 |
+| www | CNAME | **3600** | | example-app.azurewebsites.net |
+| @ | TXT | 3600 | | example-app.azurewebsites.net |
+| example.com | MX | 3600 | 10 | mail.example.com |
 
 *Notice* the bold ttl in the table above for the CNAME entry.  In the csv, it was missing, so the default ttyl was used.
 
@@ -110,7 +110,7 @@ None
 ```
 ClearAllDnsRecords -ResourceGroupName <string> -DnsZoneName <string> [-SubscriptionId <string>] [-RecordTypes <string>]
 ```
-##Parameters
+## Parameters
 
 ### -ResourceGroupName
 The resource group the DNS Zone belongs to
@@ -135,7 +135,7 @@ We can run:
 ```
 This will grab all records that have an MX or A type and remove them.  If we have the above records from example.com, we would remove the below:
 
-Name | Type | Ttl | Options | Record
---- | --- | --- | --- | ---
-www | CNAME | **3600** | | example-app.azurewebsites.net
-@ | TXT | 3600 | | example-app.azurewebsites.net
+| Name | Type | Ttl | Options | Record |
+| --- | --- | --- | --- | --- |
+| www | CNAME | **3600** | | example-app.azurewebsites.net |
+| @ | TXT | 3600 | | example-app.azurewebsites.net |
