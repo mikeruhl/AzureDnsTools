@@ -83,7 +83,8 @@ We can run:
 ```
 This will infer the domain from the file name and import the records into the DNS Zone.  This is the simplest way to run the script.
 
-| With results in Azure showing:
+With results in Azure showing:
+
 | Name | Type | Ttl | Options | Record |
 | --- | --- | --- | --- | --- |
 | @ | A | 300 |  | 10.1.1.2 |
