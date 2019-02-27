@@ -138,7 +138,8 @@ foreach ($zone in $dnsZones.where( {$_.type -ne "SOA" -and $_.type -ne "NS"})) {
     #Peer 1 allowed duplicate A/CNAME records.  This will not stand.
     if ($zone.type -eq "CNAME" -or $zone.type -eq "A") {
         $oppositeType = "A"
-        if($zone.type -eq "A"){$oppositeType = "CNAME"}
+        if ($zone.type -eq "A") {$oppositeType = "CNAME"}
+
         $aRecord = $existingRecords.where( {$_.Name -eq $zone.name -and $_.RecordType -eq $oppositeType}) | Select-Object -First 1
         if ($null -ne $aRecord) {
             if ($aRecord.Records.ToString() -eq $zone.value) {
@@ -147,7 +148,7 @@ foreach ($zone in $dnsZones.where( {$_.type -ne "SOA" -and $_.type -ne "NS"})) {
                 continue
             }
             else {
-                Write-Error "Duplicate Record Names.  Resolve the A and CNAME records for Name: $($zone.name)." -Category "ParserError" -CategoryActivity "DuplicateKeys" -TargetObject $zone
+                Write-Warning "Duplicate Record Names.  Resolve the A and CNAME records for Name: $($zone.name)."
                 continue
             }
         }
@@ -158,24 +159,42 @@ foreach ($zone in $dnsZones.where( {$_.type -ne "SOA" -and $_.type -ne "NS"})) {
     $recordSet = $null 
 
     if ($zone.type -eq "A" -and $existing) {
+        if ($existing.Records.IPv4Address.contains($zone.value)) { 
+            Write-Output "A record exists $($prettyPrint), skipping"
+            continue;
+        }
         $recordSet = Add-AzDnsRecordConfig -RecordSet $existing  -IPv4Address $zone.value
     }
     elseif ($zone.type -eq "AAAA" -and $existing) {
+        if ($existing.Records.IPv6Address.contains($zone.value)) { 
+            Write-Output "AAAA record exists $($prettyPrint), skipping"
+            continue;
+        }
         $recordSet = Add-AzDnsRecordConfig -RecordSet $existing  -IPv6Address $zone.value
     }
-    elseif ($zone.type -eq "CNAME" -and $existing) {
-        $recordSet = Add-AzDnsRecordConfig -RecordSet $existing  -Cname $zone.value
-    }
     elseif ($zone.type -eq "PTR" -and $existing) {
+        if ($existing.Records.Ptrdname.contains($zone.value)) { 
+            Write-Output "PTR record exists $($prettyPrint), skipping"
+            continue;
+        }
         $recordSet = Add-AzDnsRecordConfig -RecordSet $existing  -Ptrdname $zone.value
     }
     elseif ($zone.type -eq "TXT" -and $existing) {
+        if ($existing.Records.Value.contains($zone.value)) { 
+            Write-Output "TXT record exists $($prettyPrint), skipping"
+            continue;
+        }
         $recordSet = Add-AzDnsRecordConfig -RecordSet $existing  -Value $zone.value
     }
     elseif ($zone.type -eq "MX" -and $existing) {
+        if ($existing.Records.Exchange.contains($zone.value)) { 
+            Write-Output "MX record exists $($prettyPrint), skipping"
+            continue;
+        }
         $priority = $zone.options -replace '\D+(\d+)', '$1'
         $recordSet = Add-AzDnsRecordConfig -RecordSet $existing  -Exchange $zone.value -Preference $priority
-    }elseif ($zone.type -eq "A") {
+    }
+    elseif ($zone.type -eq "A") {
         $recordSet = New-AzDnsRecordConfig -IPv4Address $zone.value
     }
     elseif ($zone.type -eq "AAAA") {
@@ -198,7 +217,7 @@ foreach ($zone in $dnsZones.where( {$_.type -ne "SOA" -and $_.type -ne "NS"})) {
         if ($existing) {
             Add-AzDnsRecordConfig -RecordSet $existing 
             $newEntry = Set-AzDnsRecordSet -Recordset $existing
-            $existingRecords = $existingRecords.where({$_.Name -ne $zone.name -and $_.RecordType -ne $zone.type})
+            $existingRecords = $existingRecords.where( {$_.Name -ne $zone.name -and $_.RecordType -ne $zone.type})
             $existingRecords += $newEntry
         }
         else {
