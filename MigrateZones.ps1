@@ -39,16 +39,15 @@ else {
     Write-Output "Getting domain from filename"
     $domain = Split-Path $FileName -Leaf
     $domain = $domain.Substring(0, $domain.Length - 4);
-    if ($Force) {
-        break;
-    }
-    $confirmation = Read-Host "Is the domain $($domain)? [y/n]"
-    while ($confirmation -ne "y") {
-        if ($confirmation -eq 'n') {
-            Write-Host "Fix the file name and rerun script"
-            exit
-        }
+    if (!$Force) {
         $confirmation = Read-Host "Is the domain $($domain)? [y/n]"
+        while ($confirmation -ne "y") {
+            if ($confirmation -eq 'n') {
+                Write-Host "Fix the file name and rerun script"
+                exit
+            }
+            $confirmation = Read-Host "Is the domain $($domain)? [y/n]"
+        }
     }
 }
 Write-Output "Using $($domain) as the domain"
@@ -138,7 +137,7 @@ foreach ($zone in $dnsZones.where( {$_.type -ne "SOA" -and $_.type -ne "NS"})) {
     
     #Peer 1 allowed duplicate A/CNAME records.  This will not stand.
     if ($zone.type -eq "CNAME") {
-        $aRecord = $existingRecords.where( {$_.Name -eq $zone.name -and $_.type -eq "A"}) | Select-Object -First 1
+        $aRecord = $existingRecords.where( {$_.Name -eq $zone.name -and $_.RecordType -eq "A"}) | Select-Object -First 1
         if ($null -ne $aRecord) {
             if ($aRecord.Records.ToString() -eq $zone.value) {
                 #this should technically never happen because A records are for IPs and CNAMEs are for URLs
@@ -176,8 +175,9 @@ foreach ($zone in $dnsZones.where( {$_.type -ne "SOA" -and $_.type -ne "NS"})) {
     }
     if ($null -ne $recordSet) {
         if ($existing) {
-            $existing.Records += $recordSet
             $newEntry = Set-AzDnsRecordSet -Recordset $existing
+            $existingRecords = $existingRecords.where({$_.Name -ne $zone.name -and $_.RecordType -ne $zone.type})
+            $existingRecords += $newEntry
         }
         else {
             $newEntry = New-AzDnsRecordSet -Name $zone.name -RecordType $zone.type -ZoneName $domain -ResourceGroupName $ResourceGroupName -Ttl $ttl -DnsRecords ($recordSet)
