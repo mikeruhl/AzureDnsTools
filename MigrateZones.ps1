@@ -145,7 +145,7 @@ foreach ($zone in $dnsZones.where( {$_.type -ne "SOA" -and $_.type -ne "NS"})) {
                 continue
             }
             else {
-                Write-Error "Duplicate Record Names" -RecommendedAction "Resolve the A and CNAME records for Name: $($zone.name)." -Category "ParserError" -CategoryActivity "DuplicateKeys" -TargetObject $zone
+                Write-Error "Duplicate Record Names.  Resolve the A and CNAME records for Name: $($zone.name)." -Category "ParserError" -CategoryActivity "DuplicateKeys" -TargetObject $zone
                 continue
             }
         }
@@ -185,7 +185,7 @@ foreach ($zone in $dnsZones.where( {$_.type -ne "SOA" -and $_.type -ne "NS"})) {
         }
         #check success
         if ($null -eq $newEntry) {
-            Write-Warning "Something didn't go well for entry: $($prettyPrint).  Please verify and make manual adjustments if required."
+            Write-Error "Something didn't go well for entry: $($prettyPrint).  Please verify and make manual adjustments if required."
         }
         else {
             Write-Host "Added $($prettyPrint) with status: $($newEntry.ProvisioningState)"
