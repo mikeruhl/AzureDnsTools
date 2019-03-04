@@ -21,7 +21,7 @@ If the DNS Zone does not exist in the selected subscription, the script will pro
 
 If a record already exists in Azure and the record type allows additional records (ex, TXT), the script will append the new value to the existing record set and submit it.  If it can't be appended, like an A record, it will output an error.
 
-_Let's get real_.  I wrote this script to move away from a company called Peer 1.  They allowed duplicate CNAME and A records, which is technically not allowed.  Because of this, I have a check in here to avoid an Azure error that I'd like to talk about.  If you have a duplicate CNAME and A record, the script will output an error and keep going, so **check your logs**.  It will favor the A record over the CNAME due to performance gains.  In the extremely unlikely event of the A and CNAME values being equal, it will emit a warning.  More likely though, it will emit an error for you to check which one is correct.
+_Let's get real_.  I wrote this script to move away from a company called Peer 1.  They allowed duplicate CNAME and A records, which is technically not allowed.  Because of this, I have a check in here to avoid an Azure error that I'd like to talk about.  If you have a duplicate CNAME and A record, the script will favor CNAMEs over A records, so **check your logs**.  This was a requirement for us since we needed to point to deployment slots in web apps which are url based.  You will get detailed logs of why a CNAME or A was picked or skipped, so check the output.
 
 ### Prerequisites
 The csv file should have the following headers:
@@ -142,3 +142,41 @@ This will grab all records that have an MX or A type and remove them.  If we hav
 | --- | --- | --- | --- | --- |
 | www | CNAME | **3600** | | example-app.azurewebsites.net |
 | @ | TXT | 3600 | | example-app.azurewebsites.net |
+
+# DigDomains.ps1
+
+### Description
+
+This script will query a specified list of nameservers until a record value is found and then write the results to a csv.  The purpose was to validate after migrating zones that the url's still resolved to the same destinations.  Keeping the original csv format, this will produce a new file as a report showing which name server the url was resolved to (if any) and what the value was.
+
+If you specify a values column, the script will compare all TXT entries for TXT queries and output the match, if there is one.  If not, it will output the entire TXT value.
+
+### Prerequisites
+
+This tool uses the same csv file format as MigrateZones.ps1.  See above table for definition.  The following headers must be present:
+- name
+- type
+
+## Fields
+```
+DigDomains.ps1 -FileName <string> [-AzureNameServers <string>]
+```
+## Parameters
+
+### -FileName
+
+The csv filename for which you want to run DNS queries against.
+
+
+### -AzureNameServers
+
+You can use a comma-separated list of Azure DNS servers if you know ahead of time which ones you want to test.  If you omit this parameter, the dns servers 1-7 will be used.
+
+## Example
+
+We can run:
+```
+./DigDomains.ps1 -FileName example.com.csv -AzureNameServers "ns1-01.azure-dns.com, ns1-02.azure-dns.com"
+```
+
+This will run the report on only 2 Azure name servers.  It will output the report to `example.com-results.csv`

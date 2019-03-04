@@ -95,6 +95,8 @@ else {
 
     exit
 }
+
+# prune suffix to compare. 
 foreach ($zone in $dnsZones.where( {$_.type -ne "SOA" -and $_.type -ne "NS"})) {
     if ($zone.name.endswith($domain)) {
         $zone.name = $zone.name.Substring(0, $zone.name.length - $domain.length)
@@ -107,13 +109,22 @@ foreach ($zone in $dnsZones.where( {$_.type -ne "SOA" -and $_.type -ne "NS"})) {
     if ($zone.name.length -eq 0) {
         $zone.name = "@"
     }
+}
+
+foreach ($zone in $dnsZones.where( {$_.type -ne "SOA" -and $_.type -ne "NS"})) {
+    $prettyPrint = "{$($zone.name), $($zone.type), $($zone.value)}"
+
+    #check if it's a Peer 1 IP and skip
+    if($zone.value.startswith("209.15")){
+        Write-Warning "Peer 1 Server: $($prettyPrint), skipping"
+        continue
+    }
 
     #ensure flip-flopping of @/* is correct for Azure.
     if ($zone.name -eq "@" -and $zone.type -eq "CNAME") {
-        $zone.name = "*"
+        Write-Warning "This entry is invalid, CNAMEs can't use @ prefix: $($prettyPrint)"
+        continue;
     }
-
-    $prettyPrint = "{$($zone.name), $($zone.type), $($zone.value)}"
 
     #check if empty prefix (some entries are blank)
     if ([string]::IsNullOrEmpty($zone.name)) {
@@ -136,36 +147,33 @@ foreach ($zone in $dnsZones.where( {$_.type -ne "SOA" -and $_.type -ne "NS"})) {
     }
     
     #Peer 1 allowed duplicate A/CNAME records.  This will not stand.
-    if ($zone.type -eq "CNAME" -or $zone.type -eq "A") {
+    if ($zone.type -eq "CNAME" -or $zone.type -eq "A" -or $zone.type -eq "TXT") {
         $oppositeType = "A"
-        if ($zone.type -eq "A") {$oppositeType = "CNAME"}
-
+        if ($zone.type -eq "A" -or $zone.type -eq "TXT") {$oppositeType = "CNAME"}
+        
+        # Check if conflicts will occur
         $aRecord = $existingRecords.where( {$_.Name -eq $zone.name -and $_.RecordType -eq $oppositeType}) | Select-Object -First 1
-        if ($null -ne $aRecord) {
-            if ($aRecord.Records.ToString() -eq $zone.value) {
-                #this should technically never happen because A records are for IPs and CNAMEs are for URLs
-                Write-Warning "Ignoring: $($prettyPrint) because there is a $($oppositeType) record with the same value."
-                continue
-            }
-            else {
-                Write-Warning "Duplicate Record Names.  Resolve the A and CNAME records for Name: $($zone.name)."
-                continue
-            }
+        if($null -ne $aRecord -and $zone.type -eq "CNAME"){
+            Write-Warning "The record $($prettyPrint) wants to write but there's an A/TXT in it's place.  Please remove and add CNAME if appropriate."
+            continue
         }
+
+        # Check if conflicts are coming
+        $aRecord = $dnsZones.where({$_.name -eq $zone.name -and $_.type -eq $oppositeType}) | Select-Object -First 1
+        if ($null -ne $aRecord) {
+            # we're going to favor CNAME over A
+            if($zone.type -ne "CNAME"){
+                Write-Warning "Ignoring: ($prettyPrint) in favor of the CNAME"
+                continue
+            }else{Write-Host "Added this record, (A/TXT) instead of the CNAME."}
+        }else {Write-Host "Couldn't find matching $($oppositeType) to $($prettyPrint) so we will enter this."}
     }
 
     #Populate new recordset
     $newEntry = $null
     $recordSet = $null 
 
-    if ($zone.type -eq "A" -and $existing) {
-        if ($existing.Records.IPv4Address.contains($zone.value)) { 
-            Write-Output "A record exists $($prettyPrint), skipping"
-            continue;
-        }
-        $recordSet = Add-AzDnsRecordConfig -RecordSet $existing  -IPv4Address $zone.value
-    }
-    elseif ($zone.type -eq "AAAA" -and $existing) {
+    if ($zone.type -eq "AAAA" -and $existing) {
         if ($existing.Records.IPv6Address.contains($zone.value)) { 
             Write-Output "AAAA record exists $($prettyPrint), skipping"
             continue;
@@ -215,8 +223,7 @@ foreach ($zone in $dnsZones.where( {$_.type -ne "SOA" -and $_.type -ne "NS"})) {
     }
     if ($null -ne $recordSet) {
         if ($existing) {
-            Add-AzDnsRecordConfig -RecordSet $existing 
-            $newEntry = Set-AzDnsRecordSet -Recordset $existing
+            $newEntry = Set-AzDnsRecordSet -Recordset $recordSet
             $existingRecords = $existingRecords.where( {$_.Name -ne $zone.name -and $_.RecordType -ne $zone.type})
             $existingRecords += $newEntry
         }
