@@ -7,6 +7,7 @@ param (
     [Parameter(Mandatory = $true)]
     [string]$ResourceGroupName,
     [int32]$DefaultTtl = 3600,
+    [string]$IpFilterSource,
     [switch]$Force
 )
 # Login to Azure and select subscription
@@ -115,10 +116,11 @@ foreach ($zone in $dnsZones.where( {$_.type -ne "SOA" -and $_.type -ne "NS"})) {
     $prettyPrint = "{$($zone.name), $($zone.type), $($zone.value)}"
 
     #check if it's a Peer 1 IP and skip
-    if($zone.value.startswith("209.15")){
-        Write-Warning "Peer 1 Server: $($prettyPrint), skipping"
+    if($null -ne $IpFilterSource) {
+    if($zone.value.startswith($IpFilterSource)){
+        Write-Warning "Filtered Server: $($prettyPrint), skipping"
         continue
-    }
+    }}
 
     #ensure flip-flopping of @/* is correct for Azure.
     if ($zone.name -eq "@" -and $zone.type -eq "CNAME") {

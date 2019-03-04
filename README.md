@@ -38,7 +38,7 @@ The csv file should have the following headers:
 
 ## Fields
 ```
-MigrateZones -FileName <string> -ResourceGroupName <string> [-SubscriptionId <string>] [-OverrideDomainName <string>]  [-DefaultTtl <int32>]
+MigrateZones -FileName <string> -ResourceGroupName <string> [-SubscriptionId <string>] [-OverrideDomainName <string>]  [-DefaultTtl <int32>] [IpFilterSource <string>] [-Force]
 ```
 ## Parameters
 
@@ -58,6 +58,9 @@ Specify a value for Ttl when it is missing in the csv field.  This parameter is 
 
 ### -Force
 Will force dialogs to yes answers.  There are 2 possible dialogs: One to confirm the domain if inferred from the filename and one to create a DNS Zone that doesn't exist.
+
+### -IpFilterSource
+Specify an IP or just a prefix to filter out records you do not want to migrate.  I used this because I didn't want to migrate dead records, which in my case, all started with the same network part.
 
 ### -SubscriptionId
 Optional Parameter to select a subscription id upon Azure login.
